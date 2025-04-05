@@ -62,15 +62,6 @@ exports.createUser = async (req, res) => {
   }
 };
 
-exports.getUser = async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ message: "User not found" });
-    res.json(user);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
 
 exports.loginUser = async (req, res) => {
   try {
@@ -140,3 +131,49 @@ exports.loginUser = async (req, res) => {
       });
   }
 }
+
+exports.updateUser = async (req, res) => {
+  try {
+    const { name, email, phone, age } = req.body;
+    const userId = req.params.id;
+
+    // Find user and update
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    // Update fields if provided
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (phone) user.phone = phone;
+    if (age) user.age = age;
+
+    // Save updated user
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "User updated successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        phone: user.phone,
+        age: user.age,
+        createdAt: user.createdAt
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error updating user",
+      error: error.message
+    });
+  }
+};
