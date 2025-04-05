@@ -3,6 +3,7 @@ const router = express.Router();
 const accountController = require("../controllers/accountController");
 
 router.post("/", accountController.createAccount);
-router.get("/:userId", accountController.getAccounts);
+router.get("/", accountController.getAccounts);
+router.delete("/:id", accountController.deleteAccount);
 
 module.exports = router;
