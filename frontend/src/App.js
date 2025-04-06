@@ -1,14 +1,22 @@
-import { Router, Routes, Route } from 'react-router-dom';
-import PersonalInfoForm from './components/Registration/PersonalInfoForm';
-import FinancialInfoForm from './components/Registration/FinancialInfoForm';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+// import Login from './pages/Login';
+// import Register from './pages/Register';
+import Dashboard from './pages/Dashboard';
+import PrivateRoute from './components/PrivateRoute';
 
 function App() {
   return (
       <Router>
         <Routes>
-          <Route path="/register" element={<PersonalInfoForm />} />
-          <Route path="/financial-info" element={<FinancialInfoForm />} />
-          {/* ... other routes ... */}
+          <Route path="/" element={<Navigate to="/login" />} />
+          {/* <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} /> */}
+          {/* <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} /> */}
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/stocks" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+          <Route path="/mutual-funds" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+          <Route path="/fixed-deposits" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+          <Route path="/banks" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         </Routes>
       </Router>
   );
