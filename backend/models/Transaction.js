@@ -7,6 +7,9 @@ const transactionSchema = new mongoose.Schema({
   category: { type: String, required: true },
   amount: { type: Number, required: true },
   description: { type: String },
+  isRecurring: { type: Boolean, default: false },
+  frequency: { type: String, enum: ["daily", "weekly", "monthly", "yearly"], required: function() { return this.isRecurring; } },
+  nextDueDate: { type: Date },
   transactionDate: { type: Date, default: Date.now },
   createdAt: { type: Date, default: Date.now },
 });
