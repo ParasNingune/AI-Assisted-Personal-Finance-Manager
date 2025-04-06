@@ -73,9 +73,18 @@ exports.getAccounts = async (req, res) => {
 // Delete account
 exports.deleteAccount = async (req, res) => {
     try {
+        const { userId } = req.body;  // Get userId from request body
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "userId is required"
+            });
+        }
+
         const account = await Account.findOneAndDelete({
-            _id: req.params.id,
-            userId: req.userId
+            _id: req.params.id,  // Specific account ID from URL
+            userId: userId       // User ID from request body
         });
 
         if (!account) {
