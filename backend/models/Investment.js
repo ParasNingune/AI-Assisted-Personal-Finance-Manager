@@ -4,7 +4,7 @@ const investmentSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     type: { 
         type: String, 
-        enum: ["stocks", "mutualFunds", "sip", "bonds", "etf"], 
+        enum: ["stocks", "mutualFunds", "sip"], 
         required: true 
     },
     name: { type: String, required: true },

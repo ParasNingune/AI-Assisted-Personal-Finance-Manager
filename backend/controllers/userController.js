@@ -65,8 +65,9 @@ exports.createUser = async (req, res) => {
 
 exports.loginUser = async (req, res) => {
   try {
-    const { email, phone, username, password } = req.body;
-    const identifier = email || phone || username;
+    const { identifier, password } = req.body;
+    console.log(identifier)
+    console.log(password);
 
     // Check if identifier is provided
     if (!identifier || !password) {
@@ -84,6 +85,7 @@ exports.loginUser = async (req, res) => {
             { username: identifier }
         ]
     });
+    console.log(user)
 
     if (!user) {
         return res.status(401).json({
