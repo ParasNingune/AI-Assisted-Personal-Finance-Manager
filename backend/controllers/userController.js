@@ -9,10 +9,10 @@ const generateToken = (id) => {
 
 // Register user
 exports.registeredUser = async (req, res) => {
-    const { username, name, email, phone, password, profilePicture } = req.body;
+    const { name, email, phone, password, profilePicture } = req.body;
 
     // Validation: Check missing fields
-    if (!username || !name || !email || !phone || !password) {
+    if (!name || !email || !phone || !password) {
         return res.status(400).json({ message: "Please fill in all fields" });
     }
 
@@ -25,7 +25,6 @@ exports.registeredUser = async (req, res) => {
 
         // Create new user
         const user = await User.create({
-            username,
             name,
             email,
             phone,
@@ -45,7 +44,8 @@ exports.registeredUser = async (req, res) => {
 
 // Login user
 exports.loginUser = async (req, res) => {
-    const {email, password} = req.body;
+    const {identifier, password} = req.body;
+    const email = identifier;
 
     if(!email || !password) {
         return res.status(400).json({ message: "All fields are required..." });

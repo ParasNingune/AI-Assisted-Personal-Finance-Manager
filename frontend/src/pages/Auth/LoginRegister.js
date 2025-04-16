@@ -50,19 +50,19 @@ const LoginRegister = () => {
   
   const [registerData, setRegisterData] = useState({
     name: '',
-    username: '',
     email: '',
     password: '',
     phone: '',
-    age: '',
+    profilePhoto: '',
   });
   
   const [loginErrors, setLoginErrors] = useState({});
   const [registerErrors, setRegisterErrors] = useState({});
 
   const validateLoginForm = () => {
+    console.log(loginData);
     const newErrors = {};
-    if (!loginData.identifier) newErrors.identifier = 'Email, username, or phone is required';
+    if (!loginData.identifier) newErrors.identifier = 'Email is required';
     if (!loginData.password) newErrors.password = 'Password is required';
     
     setLoginErrors(newErrors);
@@ -72,7 +72,6 @@ const LoginRegister = () => {
   const validateRegisterForm = () => {
     const newErrors = {};
     if (!registerData.name) newErrors.name = 'Name is required';
-    if (!registerData.username) newErrors.username = 'Username is required';
     
     if (!registerData.email) {
       newErrors.email = 'Email is required';
@@ -82,12 +81,8 @@ const LoginRegister = () => {
     
     if (!registerData.password) {
       newErrors.password = 'Password is required';
-    } else if (registerData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-    
-    if (registerData.age && (isNaN(registerData.age) || registerData.age < 0)) {
-      newErrors.age = 'Age must be a positive number';
+    } else if (registerData.password.length < 4) {
+      newErrors.password = 'Password must be at least 4 characters';
     }
 
     setRegisterErrors(newErrors);
@@ -105,6 +100,7 @@ const LoginRegister = () => {
   };
 
   const handleLoginSubmit = async (e) => {
+    console.log(loginData);
     e.preventDefault();
     
     if (!validateLoginForm()) return;
@@ -267,13 +263,13 @@ const LoginRegister = () => {
             <Box as="form" onSubmit={handleLoginSubmit} width="100%">
               <VStack spacing={4}>
                 <FormControl isInvalid={loginErrors.identifier}>
-                  <FormLabel>Email / Username / Phone</FormLabel>
+                  <FormLabel>Email</FormLabel>
                   <InputGroup>
                     <Input
                       name="identifier"
                       value={loginData.identifier}
                       onChange={handleLoginChange}
-                      placeholder="Email, username, or phone"
+                      placeholder="Email"
                       bg={inputBg}
                       borderColor={borderColor}
                       color={textColor}
@@ -342,7 +338,7 @@ const LoginRegister = () => {
                     }}
                     transition="all 0.2s"
                   >
-                    Sign in
+                    Login
                   </Button>
                 </Stack>
               </VStack>
@@ -350,44 +346,65 @@ const LoginRegister = () => {
           ) : (
             <Box as="form" onSubmit={handleRegisterSubmit} width="100%">
               <VStack spacing={4}>
-                <HStack spacing={4} width="100%">
-                  <FormControl isInvalid={registerErrors.name}>
-                    <FormLabel>Full Name</FormLabel>
-                    <InputGroup>
-                      <Input
-                        name="name"
-                        value={registerData.name}
-                        onChange={handleRegisterChange}
-                        placeholder="Enter your full name"
-                        bg={inputBg}
-                        borderColor={borderColor}
+
+              <FormControl>
+                <FormLabel>Profile Photo</FormLabel>
+                <Center>
+                  <Box
+                    position="relative"
+                    width="120px"
+                    height="120px"
+                    borderRadius="full"
+                    borderWidth="1px"
+                    borderColor={borderColor}
+                    bg={inputBg}
+                    _hover={{
+                      borderColor: textColor,
+                      boxShadow: `0 0 0 1px ${textColor}`,
+                      transform: 'translateY(-2px)'
+                    }}
+                    transition="all 0.2s"
+                    onClick={() => document.getElementById('profile-photo').click()}
+                    boxShadow="0 1px 3px rgba(0,0,0,0.05)"
+                    cursor="pointer"
+                  >
+                    {registerData.profilePhoto ? (
+                      <Image
+                        src={URL.createObjectURL(registerData.profilePhoto)}
+                        alt="Profile"
+                        width="100%"
+                        height="100%"
+                        objectFit="cover"
+                        borderRadius="full"
                       />
-                      <InputRightElement>
-                        <Box as={FaUser} color="gray.500" />
-                      </InputRightElement>
-                    </InputGroup>
-                    <FormErrorMessage>{registerErrors.name}</FormErrorMessage>
-                  </FormControl>
-                  
-                  <FormControl isInvalid={registerErrors.username}>
-                    <FormLabel>Username</FormLabel>
-                    <InputGroup>
-                      <Input
-                        name="username"
-                        value={registerData.username}
-                        onChange={handleRegisterChange}
-                        placeholder="Choose a username"
-                        bg={inputBg}
-                        borderColor={borderColor}
-                      />
-                      <InputRightElement>
-                        <Box as={FaUserTag} color="gray.500" />
-                      </InputRightElement>
-                    </InputGroup>
-                    <FormErrorMessage>{registerErrors.username}</FormErrorMessage>
-                  </FormControl>
-                </HStack>
-                
+                    ) : (
+                      <Center height="100%">
+                        <VStack spacing={2}>
+                          <Box as={FaUser} size="32px" color="gray.500" />
+                          <Text fontSize="sm" color="gray.500" fontWeight="medium">
+                            Upload Photo
+                          </Text>
+                        </VStack>
+                      </Center>
+                    )}
+                    <Input
+                      id="profile-photo"
+                      type="file"
+                      accept="image/*"
+                      display="none"
+                      onChange={(e) => {
+                        if (e.target.files[0]) {
+                          setRegisterData({
+                            ...registerData,
+                            profilePhoto: e.target.files[0]
+                          });
+                        }
+                      }}
+                    />
+                  </Box>
+                </Center>
+              </FormControl>
+
                 <FormControl isInvalid={registerErrors.email}>
                   <FormLabel>Email</FormLabel>
                   <InputGroup>
@@ -406,7 +423,7 @@ const LoginRegister = () => {
                   </InputGroup>
                   <FormErrorMessage>{registerErrors.email}</FormErrorMessage>
                 </FormControl>
-                
+
                 <FormControl isInvalid={registerErrors.password}>
                   <FormLabel>Password</FormLabel>
                   <InputGroup>
@@ -432,8 +449,26 @@ const LoginRegister = () => {
                   </InputGroup>
                   <FormErrorMessage>{registerErrors.password}</FormErrorMessage>
                 </FormControl>
-                
+
                 <HStack spacing={4} width="100%">
+                  <FormControl isInvalid={registerErrors.name}>
+                    <FormLabel>Name</FormLabel>
+                    <InputGroup>
+                      <Input
+                        name="name"
+                        value={registerData.name}
+                        onChange={handleRegisterChange}
+                        placeholder="Enter your Name"
+                        bg={inputBg}
+                        borderColor={borderColor}
+                      />
+                      <InputRightElement>
+                        <Box as={FaUser} color="gray.500" />
+                      </InputRightElement>
+                    </InputGroup>
+                    <FormErrorMessage>{registerErrors.name}</FormErrorMessage>
+                  </FormControl>
+                
                   <FormControl isInvalid={registerErrors.phone}>
                     <FormLabel>Phone</FormLabel>
                     <InputGroup>
@@ -451,27 +486,8 @@ const LoginRegister = () => {
                     </InputGroup>
                     <FormErrorMessage>{registerErrors.phone}</FormErrorMessage>
                   </FormControl>
-                  
-                  <FormControl isInvalid={registerErrors.age}>
-                    <FormLabel>Age</FormLabel>
-                    <InputGroup>
-                      <Input
-                        name="age"
-                        type="number"
-                        value={registerData.age}
-                        onChange={handleRegisterChange}
-                        placeholder="Enter your age"
-                        bg={inputBg}
-                        borderColor={borderColor}
-                      />
-                      <InputRightElement>
-                        <Box as={FaBirthdayCake} color="gray.500" />
-                      </InputRightElement>
-                    </InputGroup>
-                    <FormErrorMessage>{registerErrors.age}</FormErrorMessage>
-                  </FormControl>
                 </HStack>
-                
+              
                 <Button
                   type="submit"
                   colorScheme="blackAlpha"
@@ -509,14 +525,6 @@ const LoginRegister = () => {
           </Stack>
         </Stack>
       </Container>
-      <Box
-        position={"absolute"}
-        ml={730}
-        mt={10}
-      >
-        testuser1 -> password123 \n
-        paras123 -> paras123
-      </Box>
     </Box>
 
     
