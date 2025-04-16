@@ -6,6 +6,7 @@ const userRoutes = require("./routes/userRoutes");
 const incomeRoutes = require("./routes/incomeRoutes");
 const expenseRoutes = require("./routes/expenseRoutes");
 const downloadRoutes = require("./routes/downloadRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
 
 const app = express();
 app.use(cors());
@@ -16,6 +17,7 @@ app.use("/api/users", userRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/income", incomeRoutes);
 app.use("/api/expense", expenseRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 //app.use("/api/download", downloadRoute);
 
 app.get("/test", (req, res) => {
