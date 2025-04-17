@@ -9,7 +9,7 @@ const generateToken = (id) => {
 
 // Register user
 exports.registeredUser = async (req, res) => {
-    const { name, email, phone, password, profilePicture } = req.body;
+    const { name, email, phone, password, profilePhoto } = req.body;
 
     // Validation: Check missing fields
     if (!name || !email || !phone || !password) {
@@ -29,7 +29,7 @@ exports.registeredUser = async (req, res) => {
             email,
             phone,
             password,
-            profilePicture,
+            profilePhoto,
         });
 
         res.status(201).json({
@@ -44,8 +44,7 @@ exports.registeredUser = async (req, res) => {
 
 // Login user
 exports.loginUser = async (req, res) => {
-    const {identifier, password} = req.body;
-    const email = identifier;
+    const {email, password} = req.body;
 
     if(!email || !password) {
         return res.status(400).json({ message: "All fields are required..." });
@@ -63,7 +62,7 @@ exports.loginUser = async (req, res) => {
             token: generateToken(user._id),
         });
     } catch (err) {
-        res.status(500).json({ message: "Error login the user..." });
+        res.status(500).json({ message: "Error login the user...", error});
     }
 };
 

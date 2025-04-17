@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -26,6 +26,9 @@ import {
 } from '@chakra-ui/react';
 import { ViewIcon, ViewOffIcon, EmailIcon } from '@chakra-ui/icons';
 import { FaUser, FaUserTag, FaPhone, FaBirthdayCake } from 'react-icons/fa';
+import ProfilePhotoSelector from '../../components/ProfilePhotoSelector';
+import { UserContext } from '../../context/UserContext';
+import uploadImage from "../../utils/uploadImage";
 
 const LoginRegister = () => {
   const navigate = useNavigate();
@@ -33,6 +36,8 @@ const LoginRegister = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
+
+  const {updateUser} = useContext(UserContext);
 
   const bgcolor = useColorModeValue('gray.50', 'gray.900');
   const borderColor = useColorModeValue('gray.300', 'gray.500');
@@ -43,8 +48,10 @@ const LoginRegister = () => {
   const hoverBg = useColorModeValue('gray.800', 'gray.600');
 
   
+  const [profilePhoto, setProfilePhoto] = useState(null);
+
   const [loginData, setLoginData] = useState({
-    identifier: '',
+    email: '',
     password: '',
   });
   
@@ -60,9 +67,8 @@ const LoginRegister = () => {
   const [registerErrors, setRegisterErrors] = useState({});
 
   const validateLoginForm = () => {
-    console.log(loginData);
     const newErrors = {};
-    if (!loginData.identifier) newErrors.identifier = 'Email is required';
+    if (!loginData.email) newErrors.email = 'Email is required';
     if (!loginData.password) newErrors.password = 'Password is required';
     
     setLoginErrors(newErrors);
@@ -100,7 +106,6 @@ const LoginRegister = () => {
   };
 
   const handleLoginSubmit = async (e) => {
-    console.log(loginData);
     e.preventDefault();
     
     if (!validateLoginForm()) return;
@@ -108,11 +113,10 @@ const LoginRegister = () => {
     setIsLoading(true);
     
     try {
-      console.log(loginData);
       const response = await axios.post('http://localhost:2000/api/users/login', loginData);
       
       localStorage.setItem('token', response.data.token);
-      console.log(response.data.token);
+      updateUser(response.data.user);
       
       toast({
         title: 'Login successful',
@@ -139,16 +143,25 @@ const LoginRegister = () => {
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
+    let profileUrl = "";
     
     if (!validateRegisterForm()) return;
     
     setIsLoading(true);
     
     try {
+
+      if(profilePhoto) {
+        const imgUploads = await uploadImage(profilePhoto);
+        profileUrl = imgUploads.imageUrl || "";
+        registerData.profilePhoto = profileUrl;
+      }
+    
       const response = await axios.post('http://localhost:2000/api/users/register', registerData);
       
       // Store token in localStorage
       localStorage.setItem('token', response.data.token);
+      updateUser(response.data.user);
       
       toast({
         title: 'Registration successful',
@@ -262,12 +275,12 @@ const LoginRegister = () => {
           {isLogin ? (
             <Box as="form" onSubmit={handleLoginSubmit} width="100%">
               <VStack spacing={4}>
-                <FormControl isInvalid={loginErrors.identifier}>
+                <FormControl isInvalid={loginErrors.email}>
                   <FormLabel>Email</FormLabel>
                   <InputGroup>
                     <Input
-                      name="identifier"
-                      value={loginData.identifier}
+                      name="email"
+                      value={loginData.email}
                       onChange={handleLoginChange}
                       placeholder="Email"
                       bg={inputBg}
@@ -282,7 +295,7 @@ const LoginRegister = () => {
                       <Box as={FaUser} color="gray.500" />
                     </InputRightElement>
                   </InputGroup>
-                  <FormErrorMessage>{loginErrors.identifier}</FormErrorMessage>
+                  <FormErrorMessage>{loginErrors.email}</FormErrorMessage>
                 </FormControl>
                 
                 <FormControl isInvalid={loginErrors.password}>
@@ -350,25 +363,9 @@ const LoginRegister = () => {
               <FormControl>
                 <FormLabel>Profile Photo</FormLabel>
                 <Center>
-                  <Box
-                    position="relative"
-                    width="120px"
-                    height="120px"
-                    borderRadius="full"
-                    borderWidth="1px"
-                    borderColor={borderColor}
-                    bg={inputBg}
-                    _hover={{
-                      borderColor: textColor,
-                      boxShadow: `0 0 0 1px ${textColor}`,
-                      transform: 'translateY(-2px)'
-                    }}
-                    transition="all 0.2s"
-                    onClick={() => document.getElementById('profile-photo').click()}
-                    boxShadow="0 1px 3px rgba(0,0,0,0.05)"
-                    cursor="pointer"
-                  >
-                    {registerData.profilePhoto ? (
+                  
+                    < ProfilePhotoSelector image={profilePhoto} setImage={setProfilePhoto} />
+                    {/* {registerData.profilePhoto ? (
                       <Image
                         src={URL.createObjectURL(registerData.profilePhoto)}
                         alt="Profile"
@@ -400,8 +397,8 @@ const LoginRegister = () => {
                           });
                         }
                       }}
-                    />
-                  </Box>
+                    /> */}
+                  
                 </Center>
               </FormControl>
 
