@@ -20,7 +20,9 @@ import {
   PieChart, 
   Pie, 
   Cell, 
-  Legend
+  Label,
+  BarChart,
+  Bar
 } from 'recharts';
 import Navbar from '../../components/Navbar';
 import {
@@ -43,25 +45,32 @@ import {
   useDisclosure,
   InputGroup,
   InputLeftElement,
+  FormLabel,
 } from '@chakra-ui/react';
 import { RiRobot2Fill } from 'react-icons/ri';
 import { DownloadIcon, DeleteIcon } from '@chakra-ui/icons';
 import { FaWallet, FaArrowUp } from 'react-icons/fa';
 
-// Move the data array inside the component
 export default function Income() {
   const data = [
-    { date: '3rd Jan', category: 'Salary', amount: 500 },
-    { date: '4th Jan', category: 'Stocks', amount: 150 },
-    { date: '5th Jan', category: 'Salary', amount: 250 },
-    { date: '6th Jan', category: 'MF', amount: 150 },
-    { date: '7th Jan', category: 'Returned', amount: 600 },
-    { date: '8th Jan', category: 'MF', amount: 450 },
-    { date: '10th Jan', category: 'Returned', amount: 750 },
-    { date: '12th Jan', category: 'Salary', amount: 850 },
-    { date: '10th Feb', category: 'Salary', amount: 600 },
-    { date: '13th Feb', category: 'Stocks', amount: 650 },
-    { date: '15th Feb', category: 'Stocks', amount: 250 },
+    { date: '3rd Jan 2025', category: 'Salary', amount: 500 },
+    { date: '4th Jan 2025', category: 'Stocks', amount: 150 },
+    { date: '5th Jan 2025', category: 'Salary', amount: 250 },
+    { date: '6th Jan 2025', category: 'MF', amount: 150 },
+    { date: '7th Jan 2025', category: 'Returned', amount: 600 },
+    { date: '8th Jan 2025', category: 'MF', amount: 450 },
+    { date: '10th Jan 2025', category: 'Returned', amount: 750 },
+    { date: '12th Jan 2025', category: 'Salary', amount: 850 },
+    { date: '10th Feb 2025', category: 'Salary', amount: 600 },
+    { date: '13th Feb 2025', category: 'Stocks', amount: 650 },
+    { date: '15th Feb 2025', category: 'Stocks', amount: 250 },
+    { date: '7th March 2025', category: 'Returned', amount: 600 },
+    { date: '8th March 2025', category: 'MF', amount: 450 },
+    { date: '10th March 2025', category: 'Returned', amount: 750 },
+    { date: '12th March 2025', category: 'Salary', amount: 850 },
+    { date: '10th April 2025', category: 'Salary', amount: 600 },
+    { date: '13th April 2025', category: 'Stocks', amount: 650 },
+    { date: '15th April 2025', category: 'Stocks', amount: 250 },
   ];
 
   const bgColor = useColorModeValue('white', 'gray.800');
@@ -85,28 +94,41 @@ export default function Income() {
 
   const totalAmount = categoryData.reduce((sum, item) => sum + item.value, 0);
 
+  const monthlyData = data.reduce((acc, item) => {
+    const month = item.date.split(' ')[1];
+    if (!acc[month]) {
+      acc[month] = { month: month, amount: 0 };
+    }
+    acc[month].amount += item.amount;
+    return acc;
+  }, {});
+  
+  const monthlyChartData = Object.values(monthlyData);
+
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
   return (
     <Box bg={pageBg} minH="100vh">
       <Navbar />
-      <Container maxW="9xl" p={10}>
-        <Box display="flex" flexDirection="column" gap={8}>
+      <Container maxW="9xl" p={{ base: 4, md: 10 }}>
+        <Box display="flex" flexDirection="column" gap={6}>
           {/* Chart Box */}
           <Box
             bg={bgColor}
-            borderRadius="2xl"
+            borderRadius="3xl"
             overflow="hidden"
-            boxShadow="0 1px 3px rgba(0,0,0,0.05)"
-            _hover={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}
+            boxShadow="xl"
+            _hover={{ boxShadow: '2xl' }}
             transition="all 0.3s ease"
-            p={6}
-            mt={16}
+            p={8}
+            mt={20}
           >
-            <Flex justify="space-between" align="center" mb={4}>
+            <Flex justify="space-between" align="center" mb={6}>
               <Box>
-                <Heading size="lg" mb={2}>Income Overview</Heading>
-                <Text color={textColor} fontSize="sm">
+                <Heading size="lg" mb={3} bgGradient="linear(to-r, purple.500, purple.300)" bgClip="text">
+                  Income Overview
+                </Heading>
+                <Text color={textColor} fontSize="md">
                   Track your income trends over time and gain insights into your earnings.
                 </Text>
               </Box>
@@ -114,20 +136,21 @@ export default function Income() {
                 leftIcon={<AddIcon />}
                 colorScheme="purple"
                 variant="solid"
-                size="md"
+                size="lg"
                 onClick={onOpen}
                 _hover={{
                   transform: 'translateY(-2px)',
                   boxShadow: 'lg',
                 }}
+                rounded="2xl"
               >
                 Add Income
               </Button>
             </Flex>
 
-            <Box h="300px" mt={8}>
+            <Box h="350px" mt={8}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data} margin={{ bottom: 30 }}>
+                <AreaChart data={data} margin={{ bottom: 25 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis
                     dataKey="date"
@@ -136,7 +159,7 @@ export default function Income() {
                     tick={{ 
                       fill: textColor, 
                       fontSize: 12,
-                      angle: -45,
+                      angle: -15,
                       textAnchor: 'end',
                       dy: 10
                     }}
@@ -169,115 +192,201 @@ export default function Income() {
             </Box>
           </Box>
 
-          // Replace the existing donut chart Box with this new version
-          <Box
-            bg={bgColor}
-            borderRadius="2xl"
-            overflow="hidden"
-            boxShadow="0 1px 3px rgba(0,0,0,0.05)"
-            _hover={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}
-            transition="all 0.3s ease"
-            p={6}
-          >
-            <VStack spacing={1} align="center" mb={4}>
-              <Heading size="md">Income by Category</Heading>
-              <Text color={textColor} fontSize="sm">January - December 2023</Text>
-            </VStack>
-            
-            <Box h="300px" position="relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={categoryData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={80}
-                    outerRadius={110}
-                    fill={lineColor}
-                    paddingAngle={5}
-                    strokeWidth={3}
-                    dataKey="value"
-                  >
-                    {categoryData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={COLORS[index % COLORS.length]}
-                        stroke={bgColor}
+          <Box display="flex" gap={8}>
+            <Box
+              flex="0.30"
+              bg={bgColor}
+              borderRadius="3xl"
+              overflow="hidden"
+              boxShadow="xl"
+              _hover={{ boxShadow: '2xl' }}
+              transition="all 0.3s ease"
+              p={8}
+            >
+              <VStack spacing={2} align="center" mb={6}>
+                <Box>
+                  <Heading size="lg" mb={3} bgGradient="linear(to-r, purple.500, purple.300)" bgClip="text">
+                    Income by Category
+                  </Heading>
+                  <Text color={textColor} fontSize="md">Understand income distribution across different sources.</Text>
+                </Box>
+              </VStack>
+              
+              <Box h="280px" position="relative">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={categoryData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={75}
+                      outerRadius={130}
+                      fill={lineColor}
+                      paddingAngle={3}
+                      strokeWidth={2}
+                      dataKey="value"
+                    >
+                      {categoryData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={COLORS[index % COLORS.length]}
+                          stroke={bgColor}
+                        />
+                      ))}
+                      <Label
+                        content={({ viewBox }) => {
+                          const { cx, cy } = viewBox;
+                          return (
+                            <g>
+                              <text
+                                x={cx}
+                                y={cy - 10}
+                                textAnchor="middle"
+                                dominantBaseline="central"
+                                style={{
+                                  fontSize: '28px',
+                                  fontWeight: 'bold',
+                                  fill: textColor,
+                                  textAlign: 'center'
+                                }}
+                              >
+                                ${totalAmount}
+                              </text>
+                              <text
+                                x={cx}
+                                y={cy + 20}
+                                textAnchor="middle"
+                                dominantBaseline="central"
+                                style={{
+                                  fontSize: '14px',
+                                  fill: textColor,
+                                  opacity: 0.7,
+                                  textAlign: 'center'
+                                }}
+                              >
+                                Total Income
+                              </text>
+                            </g>
+                          );
+                        }}
                       />
-                    ))}
-                    <Text
-                      content={({ viewBox }) => (
-                        <g>
-                          <text
-                            x={viewBox.cx}
-                            y={viewBox.cy}
-                            textAnchor="middle"
-                            dominantBaseline="central"
-                            className="total-amount"
-                            style={{
-                              fontSize: '28px',
-                              fontWeight: 'bold',
-                              fill: textColor
-                            }}
-                          >
-                            ${totalAmount}
-                          </text>
-                          <text
-                            x={viewBox.cx}
-                            y={viewBox.cy + 25}
-                            textAnchor="middle"
-                            dominantBaseline="central"
-                            style={{
-                              fontSize: '14px',
-                              fill: textColor,
-                              opacity: 0.7
-                            }}
-                          >
-                            Total Income
-                          </text>
-                        </g>
-                      )}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: bgColor,
+                        border: 'none',
+                        borderRadius: '8px',
+                        boxShadow: 'lg',
+                        padding: '8px 12px'
+                      }}
+                      formatter={(value, name) => [`$${value}`, name]}
                     />
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: bgColor,
-                      border: 'none',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                    }}
-                    formatter={(value) => [`$${value}`, 'Amount']}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+                  </PieChart>
+                </ResponsiveContainer>
+              </Box>
+            </Box>
+
+            <Box
+              flex="0.40"
+              bg={bgColor}
+              borderRadius="3xl"
+              overflow="hidden"
+              boxShadow="xl"
+              _hover={{ boxShadow: '2xl' }}
+              transition="all 0.3s ease"
+              p={8}
+            >
+              <VStack spacing={2} align="center" mb={6}>
+                <Box>
+                  <Heading size="lg" mb={3} bgGradient="linear(to-r, purple.500, purple.300)" bgClip="text">
+                    Income Distribution
+                  </Heading>
+                  <Text color={textColor} fontSize="md">Understand your spending analytics</Text>
+                </Box>
+              </VStack>
+              
+              <Box h="280px" position="relative">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={monthlyChartData}
+                    layout="horizontal"
+                    margin={{ top: 10, right: 20, left: 0, bottom: 10 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={true} opacity={0.5} />
+                    <XAxis
+                      dataKey="month"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: textColor, fontSize: 12 }}
+                    />
+                    <YAxis
+                      type="number"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: textColor, fontSize: 12 }}
+                      tickFormatter={(value) => `$${value}`}
+                      width={50}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: bgColor,
+                        border: 'none',
+                        borderRadius: '8px',
+                        boxShadow: 'lg',
+                        padding: '8px 12px'
+                      }}
+                      formatter={(value) => [`$${value}`, 'Monthly Income']}
+                    />
+                    <Bar
+                      dataKey="amount"
+                      fill={lineColor}
+                      radius={[4, 4, 0, 0]}
+                      barSize={45}
+                    >
+                      {monthlyChartData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
             </Box>
           </Box>
 
           {/* Table Box */}
           <Box
             bg={bgColor}
-            borderRadius="2xl"
+            borderRadius="3xl"
             overflow="hidden"
-            boxShadow="0 1px 3px rgba(0,0,0,0.05)"
-            _hover={{ boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}
+            boxShadow="xl"
+            _hover={{ boxShadow: '2xl' }}
             transition="all 0.3s ease"
-            p={6}
+            p={8}
           >
-            <Flex justify="space-between" align="center" mb={3}>
-              <Heading size="md">All Income</Heading>
+            <Flex justify="space-between" align="center" mb={6}>
+              <Heading size="md" bgGradient="linear(to-r, purple.500, purple.300)" bgClip="text">
+                All Income
+              </Heading>
               <Button
                 leftIcon={<DownloadIcon />}
                 variant="ghost"
-                size="sm"
+                size="md"
                 color={textColor}
-                _hover={{ bg: hoverBg }}
+                _hover={{ 
+                  bg: 'purple.50',
+                  transform: 'translateY(-2px)',
+                }}
+                rounded="xl"
               >
                 Download
               </Button>
             </Flex>
 
-            <Box maxH="500px" overflowY="auto" borderRadius="lg">
-              <Table variant="simple">
+            <Box maxH="500px" overflowY="auto" borderRadius="2xl" boxShadow="inner">
+            <Table variant="simple">
                 <Thead position="sticky" top={0} bg={bgColor} zIndex={2}>
                   <Tr>
                     <Th borderTopRadius="lg" width="50%">Transaction</Th>
@@ -319,7 +428,7 @@ export default function Income() {
                                   </Box>
                                   <Box ml={10}>
                                     <Text fontSize="lg" fontWeight="semibold" mb={1.5}>
-                                      Income
+                                      {transaction.category}
                                     </Text>
                                     <Text fontSize="sm" color={"gray.500"}>
                                       {transaction.date}
@@ -368,13 +477,17 @@ export default function Income() {
         </Box>
       </Container>
 
-      {/* Add Modal here, before the closing Box tag */}
-      <Modal isOpen={isOpen} onClose={onClose} isCentered>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Add Income</ModalHeader>
+      {/* Modal */}
+      <Modal isOpen={isOpen} onClose={onClose} isCentered size="lg">
+        <ModalOverlay backdropFilter="blur(10px)" />
+        <ModalContent borderRadius="2xl" p={4}>
+          <ModalHeader>
+            <Heading size="lg" bgGradient="linear(to-r, purple.500, purple.300)" bgClip="text">
+              Add Income
+            </Heading>
+          </ModalHeader>
           <ModalCloseButton />
-          <ModalBody pb={6}>
+          <ModalBody pb={8}>
             <VStack spacing={4}>
               <Box w="full">
                 <HStack spacing={4} mb={6}>

@@ -30,15 +30,19 @@ import {
     FaRegCreditCard
   } from 'react-icons/fa';
 
+  import { useLocation } from 'react-router-dom';
   import { Link } from 'react-router-dom';
   
   const Navbar = () => {
+    const location = useLocation();
     const bgColor = useColorModeValue('white', 'gray.800');
     const borderColor = useColorModeValue('gray.200', 'gray.700');
     const hoverBg = useColorModeValue('blue.50', 'gray.700');
     const activeBg = useColorModeValue('gray.400', 'gray.600');
     const textColor = useColorModeValue('black', 'white');
-
+    const activeColor = 'purple.500';
+  
+    const isActive = (path) => location.pathname === path;
   
     return (
       <Box
@@ -91,7 +95,10 @@ import {
                     px={4} 
                     py={2} 
                     rounded="md" 
-                    _hover={{ bg: hoverBg, color: 'gray.800' }}
+                    color={isActive('/dashboard') ? activeColor : textColor}
+                    borderBottom={isActive('/dashboard') ? '2px solid' : 'none'}
+                    borderColor={activeColor}
+                    _hover={{ bg: hoverBg, color: activeColor }}
                     _active={{ bg: activeBg }}
                   >
                     Dashboard
@@ -106,7 +113,10 @@ import {
                     px={4} 
                     py={2} 
                     rounded="md" 
-                    _hover={{ bg: hoverBg, color: 'blue.500' }}
+                    color={isActive('/income') ? activeColor : textColor}
+                    borderBottom={isActive('/income') ? '2px solid' : 'none'}
+                    borderColor={activeColor}
+                    _hover={{ bg: hoverBg, color: activeColor }}
                     _active={{ bg: activeBg }}
                   >
                     Income
@@ -121,10 +131,13 @@ import {
                     px={4} 
                     py={2} 
                     rounded="md" 
-                    _hover={{ bg: hoverBg, color: 'blue.500' }}
+                    color={isActive('/expense') ? activeColor : textColor}
+                    borderBottom={isActive('/expense') ? '2px solid' : 'none'}
+                    borderColor={activeColor}
+                    _hover={{ bg: hoverBg, color: activeColor }}
                     _active={{ bg: activeBg }}
                   >
-                    Expenses
+                    Expense
                   </Button>
                 </Tooltip>
               </Link>
@@ -136,7 +149,10 @@ import {
                     px={4} 
                     py={2} 
                     rounded="md" 
-                    _hover={{ bg: hoverBg, color: 'blue.500' }}
+                    color={isActive('/aiChat') ? activeColor : textColor}
+                    borderBottom={isActive('/aiChat') ? '2px solid' : 'none'}
+                    borderColor={activeColor}
+                    _hover={{ bg: hoverBg, color: activeColor }}
                     _active={{ bg: activeBg }}
                   >
                     AI-Chat
@@ -151,7 +167,10 @@ import {
                     px={4} 
                     py={2} 
                     rounded="md" 
-                    _hover={{ bg: hoverBg, color: 'blue.500' }}
+                    color={isActive('/report') ? activeColor : textColor}
+                    borderBottom={isActive('/report') ? '2px solid' : 'none'}
+                    borderColor={activeColor}
+                    _hover={{ bg: hoverBg, color: activeColor }}
                     _active={{ bg: activeBg }}
                   >
                     Report
