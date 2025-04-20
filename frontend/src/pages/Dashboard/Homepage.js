@@ -162,9 +162,6 @@ export default function Homepage() {
     });
 
 
-
-
-
     // Create mapped list of overall income and expense
     const incomeTy = incomeTransactions;
     const expenseTy = expenseTransactions;
