@@ -16,7 +16,6 @@ import {
   useToast,
   Container,
   FormErrorMessage,
-  Switch,
   Flex,
   Stack,
   Image,
@@ -25,7 +24,8 @@ import {
   Center,
 } from '@chakra-ui/react';
 import { ViewIcon, ViewOffIcon, EmailIcon } from '@chakra-ui/icons';
-import { FaUser, FaUserTag, FaPhone, FaBirthdayCake } from 'react-icons/fa';
+import { FaUser, FaPhone } from 'react-icons/fa';
+import axiosInstance from '../../utils/axiosInstance';
 
 const LoginRegister = () => {
   const navigate = useNavigate();
@@ -44,7 +44,7 @@ const LoginRegister = () => {
 
   
   const [loginData, setLoginData] = useState({
-    identifier: '',
+    email: '',
     password: '',
   });
   
@@ -60,9 +60,8 @@ const LoginRegister = () => {
   const [registerErrors, setRegisterErrors] = useState({});
 
   const validateLoginForm = () => {
-    console.log(loginData);
     const newErrors = {};
-    if (!loginData.identifier) newErrors.identifier = 'Email is required';
+    if (!loginData.email) newErrors.email = 'Email is required';
     if (!loginData.password) newErrors.password = 'Password is required';
     
     setLoginErrors(newErrors);
@@ -100,7 +99,6 @@ const LoginRegister = () => {
   };
 
   const handleLoginSubmit = async (e) => {
-    console.log(loginData);
     e.preventDefault();
     
     if (!validateLoginForm()) return;
@@ -108,11 +106,9 @@ const LoginRegister = () => {
     setIsLoading(true);
     
     try {
-      console.log(loginData);
-      const response = await axios.post('http://localhost:2000/api/users/login', loginData);
+      const response = await axiosInstance.post('/users/login', loginData);
       
       localStorage.setItem('token', response.data.token);
-      console.log(response.data.token);
       
       toast({
         title: 'Login successful',
@@ -262,12 +258,12 @@ const LoginRegister = () => {
           {isLogin ? (
             <Box as="form" onSubmit={handleLoginSubmit} width="100%">
               <VStack spacing={4}>
-                <FormControl isInvalid={loginErrors.identifier}>
+                <FormControl isInvalid={loginErrors.email}>
                   <FormLabel>Email</FormLabel>
                   <InputGroup>
                     <Input
-                      name="identifier"
-                      value={loginData.identifier}
+                      name="email"
+                      value={loginData.email}
                       onChange={handleLoginChange}
                       placeholder="Email"
                       bg={inputBg}
@@ -282,7 +278,7 @@ const LoginRegister = () => {
                       <Box as={FaUser} color="gray.500" />
                     </InputRightElement>
                   </InputGroup>
-                  <FormErrorMessage>{loginErrors.identifier}</FormErrorMessage>
+                  <FormErrorMessage>{loginErrors.email}</FormErrorMessage>
                 </FormControl>
                 
                 <FormControl isInvalid={loginErrors.password}>

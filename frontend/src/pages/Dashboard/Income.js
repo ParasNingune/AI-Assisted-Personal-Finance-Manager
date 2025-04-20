@@ -1,13 +1,4 @@
-import React from 'react';
-import {
-  Box,
-  Heading,
-  Text,
-  Button,
-  useColorModeValue,
-  Flex,
-  Container,
-} from '@chakra-ui/react';
+import {React, useEffect, useState, useRef} from 'react';
 import { AddIcon } from '@chakra-ui/icons';
 import {
   AreaChart,
@@ -26,6 +17,13 @@ import {
 } from 'recharts';
 import Navbar from '../../components/Navbar';
 import {
+  Box,
+  Heading,
+  Text,
+  Button,
+  useColorModeValue,
+  Flex,
+  Container,
   Table,
   Thead,
   Tbody,
@@ -45,34 +43,21 @@ import {
   useDisclosure,
   InputGroup,
   InputLeftElement,
-  FormLabel,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
 } from '@chakra-ui/react';
 import { RiRobot2Fill } from 'react-icons/ri';
 import { DownloadIcon, DeleteIcon } from '@chakra-ui/icons';
-import { FaWallet, FaArrowUp } from 'react-icons/fa';
+import EmojiPicker from 'emoji-picker-react';
+import axiosInstance from '../../utils/axiosInstance';
 
 export default function Income() {
-  const data = [
-    { date: '3rd Jan 2025', category: 'Salary', amount: 500 },
-    { date: '4th Jan 2025', category: 'Stocks', amount: 150 },
-    { date: '5th Jan 2025', category: 'Salary', amount: 250 },
-    { date: '6th Jan 2025', category: 'MF', amount: 150 },
-    { date: '7th Jan 2025', category: 'Returned', amount: 600 },
-    { date: '8th Jan 2025', category: 'MF', amount: 450 },
-    { date: '10th Jan 2025', category: 'Returned', amount: 750 },
-    { date: '12th Jan 2025', category: 'Salary', amount: 850 },
-    { date: '10th Feb 2025', category: 'Salary', amount: 600 },
-    { date: '13th Feb 2025', category: 'Stocks', amount: 650 },
-    { date: '15th Feb 2025', category: 'Stocks', amount: 250 },
-    { date: '7th March 2025', category: 'Returned', amount: 600 },
-    { date: '8th March 2025', category: 'MF', amount: 450 },
-    { date: '10th March 2025', category: 'Returned', amount: 750 },
-    { date: '12th March 2025', category: 'Salary', amount: 850 },
-    { date: '10th April 2025', category: 'Salary', amount: 600 },
-    { date: '13th April 2025', category: 'Stocks', amount: 650 },
-    { date: '15th April 2025', category: 'Stocks', amount: 250 },
-  ];
 
+  const [incomeData, setIncomeData] = useState([]);
   const bgColor = useColorModeValue('white', 'gray.800');
   const textColor = useColorModeValue('gray.600', 'gray.200');
   const lineColor = useColorModeValue('#805AD5', '#B794F4');
@@ -84,7 +69,48 @@ export default function Income() {
   const amountBg = useColorModeValue('green.50', 'green.900');
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  const categoryData = Object.values(data.reduce((acc, item) => {
+  const groupedIncomeData = Object.values(
+    incomeData.reduce((acc, item) => {
+      const dateObj = new Date(item.date);
+      const year = dateObj.getFullYear();
+      const month = dateObj.getMonth();
+      const day = dateObj.getDate();
+  
+      let period = '';
+      if (day <= 10) period = '1-10';
+      else if (day <= 20) period = '10-20';
+      else period = '20-30';
+      const label = `${dateObj.toLocaleString('default', { month: 'short' })} ${year} (${period})`;
+  
+      if (!acc[label]) {
+        acc[label] = { date: label, amount: 0 };
+      }
+  
+      acc[label].amount += item.amount;
+      return acc;
+    }, {})
+  ).sort((a, b) => {
+    const getSortable = (str) => {
+      const [monthName, yearPart] = str.split(' ');
+      const month = new Date(`${monthName} 1, 2000`).getMonth();
+      const year = parseInt(yearPart);
+      const period = str.split('(')[1].replace(')', '');
+  
+      // Convert period into a numerical value (1-10, 10-20, 20-30 => 1, 2, 3)
+      let periodValue = 0;
+      if (period === '1-10') periodValue = 1;
+      else if (period === '10-20') periodValue = 2;
+      else if (period === '20-30') periodValue = 3;
+  
+      // Return a sortable value that factors in year, month, and period
+      return year * 100 + month * 3 + periodValue;
+    };
+  
+    return getSortable(a.date) - getSortable(b.date);
+  });
+  
+
+  const categoryData = Object.values(incomeData.reduce((acc, item) => {
     if (!acc[item.category]) {
       acc[item.category] = { name: item.category, value: 0 };
     }
@@ -94,7 +120,7 @@ export default function Income() {
 
   const totalAmount = categoryData.reduce((sum, item) => sum + item.value, 0);
 
-  const monthlyData = data.reduce((acc, item) => {
+  const monthlyData = incomeData.reduce((acc, item) => {
     const month = item.date.split(' ')[1];
     if (!acc[month]) {
       acc[month] = { month: month, amount: 0 };
@@ -102,10 +128,111 @@ export default function Income() {
     acc[month].amount += item.amount;
     return acc;
   }, {});
-  
-  const monthlyChartData = Object.values(monthlyData);
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [selectedEmoji, setSelectedEmoji] = useState('💰');
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState(null);
+  const cancelRef = useRef();
+
+  const COLORS = [
+    '#6EE7B7', // Emerald-300
+    '#93C5FD', // Blue-300
+    '#FDE68A', // Yellow-300
+    '#FCA5A5', // Red-300
+    '#C4B5FD', // Purple-300
+    '#A5F3FC', // Cyan-200
+    '#FBCFE8', // Pink-200
+    '#DDD6FE', // Indigo-200
+    '#BBF7D0', // Green-200
+    '#FECDD3', // Rose-200
+    '#FCD34D', // Amber-300
+    '#F0ABFC', // Fuchsia-300
+    '#67E8F9', // Sky-300
+    '#FDBA74', // Orange-300
+    '#BFDBFE', // Blue-200
+  ];
+
+
+  // Fetch Income details
+  const fetchIncomeDetails = async () => {
+    try {
+      const response = await axiosInstance.get("/income/get");
+
+      if (response.data) {
+        setIncomeData(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching income details:', error);
+    }
+  };
+
+  const handleAddIncome = async (income) => {
+    // Add logic to handle adding income
+  };
+
+  const handleDeleteClick = async (id) => {
+    try {
+      const response = await axiosInstance.delete(`/income/${id}`);
+
+      setIsDeleteAlertOpen(false);
+
+      fetchIncomeDetails();
+    } catch (error) {
+      console.error('Error deleting income transaction:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchIncomeDetails();
+
+    return () => {
+    }
+  }, []);
+
+  
+  const formattedData = [...incomeData]
+  .map(item => ({
+    ...item,
+    date: new Date(item.date),
+  }))
+  .sort((a, b) => a.date - b.date);
+
+  const groupedBySource = Object.values(
+    incomeData.reduce((acc, item) => {
+      if (!acc[item.source]) {
+        acc[item.source] = {
+          name: item.source,
+          value: 0,
+        };
+      }
+      acc[item.source].value += item.amount;
+      return acc;
+    }, {})
+  );
+
+  const monthlyGroupedData = Object.values(
+    incomeData.reduce((acc, item) => {
+      const dateObj = new Date(item.date);
+      const month = dateObj.toLocaleString('default', { month: 'short' });
+      const year = dateObj.getFullYear();
+      const key = `${month} ${year}`;
+  
+      if (!acc[key]) {
+        acc[key] = {
+          month: key,
+          amount: 0,
+          sortDate: new Date(year, dateObj.getMonth()),
+        };
+      }
+  
+      acc[key].amount += item.amount;
+      return acc;
+    }, {})
+  )
+  .sort((a, b) => a.sortDate - b.sortDate)
+  .map(({ sortDate, ...rest }) => rest); 
+
 
   return (
     <Box bg={pageBg} minH="100vh">
@@ -125,7 +252,7 @@ export default function Income() {
           >
             <Flex justify="space-between" align="center" mb={6}>
               <Box>
-                <Heading size="lg" mb={3} bgGradient="linear(to-r, purple.500, purple.300)" bgClip="text">
+                <Heading size="lg" mb={3} color={"black"}>
                   Income Overview
                 </Heading>
                 <Text color={textColor} fontSize="md">
@@ -135,7 +262,8 @@ export default function Income() {
               <Button
                 leftIcon={<AddIcon />}
                 colorScheme="purple"
-                variant="solid"
+                variant="outline"
+                fill="purple.300"
                 size="lg"
                 onClick={onOpen}
                 _hover={{
@@ -150,19 +278,20 @@ export default function Income() {
 
             <Box h="350px" mt={8}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data} margin={{ bottom: 25 }}>
+              <AreaChart
+                data={formattedData}
+                margin={{ left: 10, right: 10, bottom: 25 }}
+              >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis
                     dataKey="date"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ 
-                      fill: textColor, 
-                      fontSize: 12,
-                      angle: -15,
-                      textAnchor: 'end',
-                      dy: 10
+                    tickFormatter={(date) => {
+                      const d = new Date(date);
+                      return `${d.getDate()}-${d.toLocaleString('default', { month: 'short' })}`;
                     }}
+                    stroke="black"
+                    angle={-45}
+                    textAnchor="end"
                   />
                   <YAxis
                     axisLine={false}
@@ -170,6 +299,10 @@ export default function Income() {
                     tick={{ fill: textColor, fontSize: 12 }}
                   />
                   <Tooltip
+                    labelFormatter={(value) => {
+                      const d = new Date(value);
+                      return `${d.getDate()}-${d.toLocaleString('default', { month: 'short' })}`;
+                    }}
                     contentStyle={{
                       backgroundColor: bgColor,
                       border: 'none',
@@ -180,11 +313,11 @@ export default function Income() {
                   <Area
                     type="monotone"
                     dataKey="amount"
-                    stroke={lineColor}
-                    fill={lineColor}
-                    fillOpacity={0.2}
+                    stroke="#38A169"
+                    fill="#C6F6D5"
+                    fillOpacity={0.7}
                     strokeWidth={2}
-                    dot={{ fill: lineColor, strokeWidth: 2 }}
+                    dot={{ fill: "#38A169", strokeWidth: 3 }}
                     activeDot={{ r: 8 }}
                   />
                 </AreaChart>
@@ -192,6 +325,8 @@ export default function Income() {
             </Box>
           </Box>
 
+
+          {/* Pie Chart */}
           <Box display="flex" gap={8}>
             <Box
               flex="0.30"
@@ -205,18 +340,17 @@ export default function Income() {
             >
               <VStack spacing={2} align="center" mb={6}>
                 <Box>
-                  <Heading size="lg" mb={3} bgGradient="linear(to-r, purple.500, purple.300)" bgClip="text">
+                  <Heading size="lg" mb={3} color={"black"}>
                     Income by Category
                   </Heading>
                   <Text color={textColor} fontSize="md">Understand income distribution across different sources.</Text>
                 </Box>
               </VStack>
-              
               <Box h="280px" position="relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={categoryData}
+                      data={groupedBySource}
                       cx="50%"
                       cy="50%"
                       innerRadius={75}
@@ -225,8 +359,9 @@ export default function Income() {
                       paddingAngle={3}
                       strokeWidth={2}
                       dataKey="value"
+                      nameKey="name"
                     >
-                      {categoryData.map((entry, index) => (
+                      {groupedBySource.map((entry, index) => (
                         <Cell 
                           key={`cell-${index}`} 
                           fill={COLORS[index % COLORS.length]}
@@ -286,6 +421,7 @@ export default function Income() {
               </Box>
             </Box>
 
+            {/* Bar Chart */}
             <Box
               flex="0.40"
               bg={bgColor}
@@ -298,17 +434,18 @@ export default function Income() {
             >
               <VStack spacing={2} align="center" mb={6}>
                 <Box>
-                  <Heading size="lg" mb={3} bgGradient="linear(to-r, purple.500, purple.300)" bgClip="text">
+                  <Heading size="lg" mb={3} color={"black"}>
                     Income Distribution
                   </Heading>
                   <Text color={textColor} fontSize="md">Understand your spending analytics</Text>
                 </Box>
               </VStack>
-              
+
+
               <Box h="280px" position="relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={monthlyChartData}
+                    data={monthlyGroupedData}
                     layout="horizontal"
                     margin={{ top: 10, right: 20, left: 0, bottom: 10 }}
                   >
@@ -317,13 +454,13 @@ export default function Income() {
                       dataKey="month"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: textColor, fontSize: 12 }}
+                      tick={{ fill: textColor, fontSize: 14, fontWeight:'semibold' }}
                     />
                     <YAxis
                       type="number"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: textColor, fontSize: 12 }}
+                      tick={{ fill: textColor, fontSize: 14, fontWeight:'semibold' }}
                       tickFormatter={(value) => `$${value}`}
                       width={50}
                     />
@@ -339,17 +476,10 @@ export default function Income() {
                     />
                     <Bar
                       dataKey="amount"
-                      fill={lineColor}
+                      fill="#60A5FA"
                       radius={[4, 4, 0, 0]}
                       barSize={45}
-                    >
-                      {monthlyChartData.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`}
-                          fill={COLORS[index % COLORS.length]}
-                        />
-                      ))}
-                    </Bar>
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </Box>
@@ -367,7 +497,7 @@ export default function Income() {
             p={8}
           >
             <Flex justify="space-between" align="center" mb={6}>
-              <Heading size="md" bgGradient="linear(to-r, purple.500, purple.300)" bgClip="text">
+              <Heading size="md" color={"black"}>
                 All Income
               </Heading>
               <Button
@@ -394,10 +524,10 @@ export default function Income() {
                   </Tr>
                 </Thead>
                 <Tbody>
-                  {Array.from({ length: Math.ceil(data.length / 2) }).map((_, rowIndex) => (
+                  {Array.from({ length: Math.ceil(incomeData.length / 2) }).map((_, rowIndex) => (
                     <Tr key={rowIndex}>
                       {[0, 1].map((colIndex) => {
-                        const transaction = data[rowIndex * 2 + colIndex];
+                        const transaction = incomeData[rowIndex * 2 + colIndex];
                         return transaction ? (
                           <Td key={colIndex}>
                             <Box
@@ -424,14 +554,18 @@ export default function Income() {
                                     alignItems="center"
                                     justifyContent="center"
                                   >
-                                    <Icon as={FaWallet} color="purple.500" boxSize={6} />
+                                    <Icon as={transaction.icon} color="purple.500" boxSize={6} />
                                   </Box>
                                   <Box ml={10}>
                                     <Text fontSize="lg" fontWeight="semibold" mb={1.5}>
-                                      {transaction.category}
+                                      {transaction.source}
                                     </Text>
                                     <Text fontSize="sm" color={"gray.500"}>
-                                      {transaction.date}
+                                    {new Date(transaction.date).toLocaleDateString('en-GB', {
+                                      day: '2-digit',
+                                      month: 'short',
+                                      year: 'numeric'
+                                    })}
                                     </Text>
                                   </Box>
                                 </HStack>
@@ -444,6 +578,10 @@ export default function Income() {
                                     opacity={0}
                                     className="delete-icon"
                                     transition="all 0.2s"
+                                    onClick={() => {
+                                      setTransactionToDelete(transaction._id);
+                                      setIsDeleteAlertOpen(true);
+                                    }}
                                     _hover={{ 
                                       color: 'red.500',
                                       transform: 'scale(1.1)'
@@ -482,7 +620,7 @@ export default function Income() {
         <ModalOverlay backdropFilter="blur(10px)" />
         <ModalContent borderRadius="2xl" p={4}>
           <ModalHeader>
-            <Heading size="lg" bgGradient="linear(to-r, purple.500, purple.300)" bgClip="text">
+            <Heading size="lg" color={"black"}>
               Add Income
             </Heading>
           </ModalHeader>
@@ -493,12 +631,43 @@ export default function Income() {
                 <HStack spacing={4} mb={6}>
                   <Box
                     p={3}
-                    bg={iconBg}
-                    borderRadius="xl"
+                    bg={'purple.100'}
+                    borderRadius="25"
                     cursor="pointer"
-                    _hover={{ bg: 'purple.100' }}
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    position="relative"
+                    _hover={{ bg: 'purple.400' }}
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    boxSize="50px"
                   >
-                    <Icon as={FaWallet} boxSize={6} color="purple.500" />
+                    <Text fontSize="3xl" lineHeight="1">
+                      {selectedEmoji}
+                    </Text>
+                    {showEmojiPicker && (
+                      <Box
+                        position="absolute"
+                        top="100%"
+                        left="0"
+                        zIndex="dropdown"
+                        mt={2}
+                      >
+                        <EmojiPicker
+                          size={24}
+                          onEmojiClick={(emojiObject) => {
+                            setSelectedEmoji(emojiObject.emoji);
+                            setShowEmojiPicker(false);
+                          }}
+                          lazyLoadEmojis={true}
+                          searchPlaceholder="Search emoji..."
+                          previewConfig={{
+                            showPreview: true,
+                            defaultCaption: "Pick an emoji for your income category"
+                          }}
+                        />
+                      </Box>
+                    )}
                   </Box>
                   <Text fontWeight="medium">Change Icon</Text>
                 </HStack>
@@ -562,6 +731,38 @@ export default function Income() {
           </ModalBody>
         </ModalContent>
       </Modal>
+
+      <AlertDialog
+        isOpen={isDeleteAlertOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={() => setIsDeleteAlertOpen(false)}
+        isCentered
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Delete Transaction
+            </AlertDialogHeader>
+
+            <AlertDialogBody>
+              Are you sure? This action cannot be undone.
+            </AlertDialogBody>
+
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={() => setIsDeleteAlertOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                colorScheme="red" 
+                onClick={() => handleDeleteClick(transactionToDelete)} 
+                ml={3}
+              >
+                Delete
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
     </Box>
   );
 }
