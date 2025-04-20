@@ -26,12 +26,12 @@ import {
     FaHome, 
     FaRobot, 
     FaChartPie, 
-    FaFileAlt,
     FaRegCreditCard
   } from 'react-icons/fa';
 
-  import { useLocation } from 'react-router-dom';
-  import { Link } from 'react-router-dom';
+  import { UserContext } from '../context/UserContext';
+  import {useLocation, useNavigate, Link } from 'react-router-dom';
+  import { useContext } from 'react';
   
   const Navbar = () => {
     const location = useLocation();
@@ -43,6 +43,14 @@ import {
     const activeColor = 'purple.500';
   
     const isActive = (path) => location.pathname === path;
+
+    const { clearUser } = useContext(UserContext);
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+      clearUser();
+      navigate("/login"); 
+    }
   
     return (
       <Box
@@ -159,24 +167,6 @@ import {
                   </Button>
                 </Tooltip>
               </Link>
-              <Link to="/report">
-                <Tooltip label="Report" placement="bottom" hasArrow>
-                  <Button 
-                    leftIcon={<FaFileAlt />} 
-                    variant="ghost" 
-                    px={4} 
-                    py={2} 
-                    rounded="md" 
-                    color={isActive('/report') ? activeColor : textColor}
-                    borderBottom={isActive('/report') ? '2px solid' : 'none'}
-                    borderColor={activeColor}
-                    _hover={{ bg: hoverBg, color: activeColor }}
-                    _active={{ bg: activeBg }}
-                  >
-                    Report
-                  </Button>
-                </Tooltip>
-              </Link>
             </HStack>
           </Flex>
   
@@ -220,7 +210,7 @@ import {
                   <MenuItem icon={<FaChartPie />}>Portfolio</MenuItem>
                   <MenuItem icon={<FaRobot />}>Transactions</MenuItem>
                   <Divider />
-                  <MenuItem>Logout</MenuItem>
+                  <MenuItem onClick={handleLogout}>Logout</MenuItem>
                 </MenuList>
               </Menu>
             </HStack>

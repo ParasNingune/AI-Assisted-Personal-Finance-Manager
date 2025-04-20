@@ -294,9 +294,25 @@ export default function Income() {
 
   const chartData = formatIncomeChartData(incomeData);
 
+  const handleDownloadDetails = async() => {
+    try {
+      const response = await axiosInstance.get("/income/download", {responseType: "blob"});
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "income_details.pdf");
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.log("Error downloading", err);
+    }
+  }
+
   return (
     <Box bg={pageBg} minH="100vh">
-      {console.log(incomeData)}
       <Navbar />
       <Container maxW="9xl" p={{ base: 4, md: 10 }}>
         <Box display="flex" flexDirection="column" gap={6}>
@@ -584,6 +600,7 @@ export default function Income() {
                   transform: 'translateY(-2px)',
                 }}
                 rounded="xl"
+                onClick={handleDownloadDetails}
               >
                 Download
               </Button>

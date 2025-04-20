@@ -297,9 +297,25 @@ export default function Expense() {
     fetchexpenseDetails();
   }, []);
 
+  const handleDownloadDetails = async() => {
+      try {
+        const response = await axiosInstance.get("/expense/download", {responseType: "blob"});
+  
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", "expense_details.pdf");
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } catch (err) {
+        console.log("Error downloading", err);
+      }
+    }
+
   return (
     <Box bg={pageBg} minH="100vh">
-      {console.log(expenseData)}
       <Navbar />
       <Container maxW="9xl" p={{ base: 4, md: 10 }}>
         <Box display="flex" flexDirection="column" gap={6}>
@@ -587,6 +603,7 @@ export default function Expense() {
                   transform: 'translateY(-2px)',
                 }}
                 rounded="xl"
+                onClick={handleDownloadDetails}
               >
                 Download
               </Button>

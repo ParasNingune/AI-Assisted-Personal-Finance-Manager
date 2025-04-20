@@ -11,15 +11,19 @@ import {
   IconButton,
   InputGroup,
   InputRightElement,
+  useToast,
 } from '@chakra-ui/react';
 import { FiSend } from 'react-icons/fi';
 import { RiRobotFill, RiUserFill } from 'react-icons/ri';
 import Navbar from '../../components/Navbar';
+import { geminiService } from '../../utils/geminiService';
+import ReactMarkdown from 'react-markdown';
 
 export default function AiChat() {
   const [messages, setMessages] = useState([
     { text: "Hello! I'm your AI financial assistant. How can I help you today?", isBot: true }
   ]);
+
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
   
@@ -29,6 +33,9 @@ export default function AiChat() {
   const botBubbleBg = useColorModeValue('gray.100', 'gray.700');
   const userTextColor = useColorModeValue('white', 'gray.800');
   const botTextColor = useColorModeValue('gray.800', 'white');
+  const codeBlockBg = useColorModeValue('gray.100', 'gray.700');  // Add this line
+  const toast = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -38,20 +45,54 @@ export default function AiChat() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
+  useEffect(() => {
+    initializeChat();
+  }, []);
 
-    setMessages(prev => [...prev, { text: input, isBot: false }]);
+  const initializeChat = async () => {
+    try {
+      await geminiService.startChat();
+    } catch (error) {
+      console.error('Error initializing chat:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to initialize chat',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
+
     const userMessage = input;
     setInput('');
+    setMessages(prev => [...prev, { text: userMessage, isBot: false }]);
+    setIsLoading(true);
 
-    // Simulate AI response (replace with actual API call)
-    setTimeout(() => {
+    try {
+      const response = await geminiService.sendMessage(userMessage);
       setMessages(prev => [...prev, {
-        text: "I'm processing your request. This is a placeholder response. In the actual implementation, this would be connected to your AI backend.",
+        text: response.response,
         isBot: true
       }]);
-    }, 1000);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to get response',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      setMessages(prev => [...prev, {
+        text: "I'm sorry, I couldn't process your request. Please try again.",
+        isBot: true
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleKeyPress = (e) => {
@@ -113,6 +154,7 @@ export default function AiChat() {
                     <RiRobotFill size={20} />
                   </Box>
                 )}
+                
                 <Box
                   maxW="70%"
                   bg={message.isBot ? botBubbleBg : userBubbleBg}
@@ -120,9 +162,34 @@ export default function AiChat() {
                   py={3}
                   px={6}
                   borderRadius="2xl"
-                  fontSize="md"
+                  fontSize="sm"
                 >
-                  <Text>{message.text}</Text>
+                  {message.isBot ? (
+                    <ReactMarkdown
+                      components={{
+                        p: ({ children }) => <Text mb={2}>{children}</Text>,
+                        strong: ({ children }) => (
+                          <Text fontWeight="bold" fontSize="sm" mb={2}>
+                            {children}
+                          </Text>
+                        ),
+                        li: ({ children }) => (
+                          <Text as="div" pl={4} mb={1}>
+                            • {children}
+                          </Text>
+                        ),
+                        code: ({ children }) => (
+                          <Text as="span" fontFamily="mono" bg={codeBlockBg} px={1} borderRadius="sm">
+                            {children}
+                          </Text>
+                        ),
+                      }}
+                    >
+                      {message.text}
+                    </ReactMarkdown>
+                  ) : (
+                    <Text>{message.text}</Text>
+                  )}
                 </Box>
                 {!message.isBot && (
                   <Box
@@ -145,11 +212,12 @@ export default function AiChat() {
             <InputGroup size="lg">
               <Input
                 pr="4.5rem"
-                placeholder="Type your message..."
+                placeholder={isLoading ? "AI is thinking..." : "Type your message..."}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={handleKeyPress}
                 bg={useColorModeValue('gray.50', 'gray.700')}
+                disabled={isLoading}
               />
               <InputRightElement width="4.5rem">
                 <IconButton
@@ -158,7 +226,8 @@ export default function AiChat() {
                   icon={<FiSend />}
                   colorScheme="purple"
                   onClick={handleSend}
-                  isDisabled={!input.trim()}
+                  isDisabled={!input.trim() || isLoading}
+                  isLoading={isLoading}
                 />
               </InputRightElement>
             </InputGroup>
