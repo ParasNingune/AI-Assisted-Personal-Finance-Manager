@@ -18,6 +18,9 @@ import {
 import Navbar from '../../components/Navbar';
 import {
   Box,
+  Grid,
+  GridItem,
+  Image,
   Heading,
   Text,
   Button,
@@ -49,65 +52,37 @@ import {
   AlertDialogHeader,
   AlertDialogContent,
   AlertDialogOverlay,
+  useToast,
 } from '@chakra-ui/react';
-import { RiRobot2Fill } from 'react-icons/ri';
 import { DownloadIcon, DeleteIcon } from '@chakra-ui/icons';
 import EmojiPicker from 'emoji-picker-react';
 import axiosInstance from '../../utils/axiosInstance';
 
 export default function Expense() {
-  const [expenseData, setExpenseData] = useState([]);
+
+  const [expenseData, setexpenseData] = useState([]);
   const bgColor = useColorModeValue('white', 'gray.800');
   const textColor = useColorModeValue('gray.600', 'gray.200');
   const lineColor = useColorModeValue('#805AD5', '#B794F4');
   const pageBg = useColorModeValue('rgb(236, 237, 243)', 'gray.900');
   const hoverBg = useColorModeValue('gray.50', 'gray.700');
+   const toast = useToast();
   
   const borderColor = useColorModeValue('gray.100', 'gray.700');
   const iconBg = useColorModeValue('purple.50', 'purple.900');
   const amountBg = useColorModeValue('green.50', 'green.900');
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  const groupedExpenseData = Object.values(
-    expenseData.reduce((acc, item) => {
-      const dateObj = new Date(item.date);
-      const year = dateObj.getFullYear();
-      const month = dateObj.getMonth();
-      const day = dateObj.getDate();
-  
-      let period = '';
-      if (day <= 10) period = '1-10';
-      else if (day <= 20) period = '10-20';
-      else period = '20-30';
-      const label = `${dateObj.toLocaleString('default', { month: 'short' })} ${year} (${period})`;
-  
-      if (!acc[label]) {
-        acc[label] = { date: label, amount: 0 };
-      }
-  
-      acc[label].amount += item.amount;
-      return acc;
-    }, {})
-  ).sort((a, b) => {
-    const getSortable = (str) => {
-      const [monthName, yearPart] = str.split(' ');
-      const month = new Date(`${monthName} 1, 2000`).getMonth();
-      const year = parseInt(yearPart);
-      const period = str.split('(')[1].replace(')', '');
-  
-      // Convert period into a numerical value (1-10, 10-20, 20-30 => 1, 2, 3)
-      let periodValue = 0;
-      if (period === '1-10') periodValue = 1;
-      else if (period === '10-20') periodValue = 2;
-      else if (period === '20-30') periodValue = 3;
-  
-      // Return a sortable value that factors in year, month, and period
-      return year * 100 + month * 3 + periodValue;
-    };
-  
-    return getSortable(a.date) - getSortable(b.date);
+  const [expense, setexpense] = useState({
+    source: "",
+    amount: "",
+    date: "",
+    icon: "",
   });
-  
+
+  const handleChange = (key, value) => setexpense({...expense, [key]: value});
+
+  const handleAddWithAI = () => {};
 
   const categoryData = Object.values(expenseData.reduce((acc, item) => {
     if (!acc[item.category]) {
@@ -119,17 +94,10 @@ export default function Expense() {
 
   const totalAmount = categoryData.reduce((sum, item) => sum + item.value, 0);
 
-  const monthlyData = expenseData.reduce((acc, item) => {
-    const month = item.date.split(' ')[1];
-    if (!acc[month]) {
-      acc[month] = { month: month, amount: 0 };
-    }
-    acc[month].amount += item.amount;
-    return acc;
-  }, {});
 
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [selectedEmoji, setSelectedEmoji] = useState('💰');
+  const [selectedEmojiUrl, setSelectedEmojiUrl] = useState("");
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState(null);
   const cancelRef = useRef();
@@ -152,46 +120,136 @@ export default function Expense() {
     '#BFDBFE', // Blue-200
   ];
 
+  const formatexpenseChartData = () => {
+    const grouped = {};
+    const now = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(now.getDate() - 30);
+
+    expenseData.forEach((entry) => {
+      const entryDate = new Date(entry.date);
+      if (entryDate >= thirtyDaysAgo && entryDate <= now) {
+        const key = entryDate.toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+        });
+
+        if (!grouped[key]) {
+          grouped[key] = 0;
+        }
+
+        grouped[key] += entry.amount;
+      }
+    });
+
+    // Return only days with transactions (no empty points)
+    return Object.entries(grouped).map(([date, amount]) => ({
+      date,
+      amount,
+    })).reverse();
+  };
+
+  let chartData = formatexpenseChartData();
 
   // Fetch expense details
-  const fetchExpenseDetails = async () => {
+  const fetchexpenseDetails = async () => {
     try {
       const response = await axiosInstance.get("/expense/get");
 
       if (response.data) {
-        setExpenseData(response.data);
+        setexpenseData(response.data);
       }
     } catch (error) {
       console.error('Error fetching expense details:', error);
     }
   };
 
-  const handleAddExpense = async (expense) => {
-    // Add logic to handle adding expense
+  const handleAddexpense = async () => { // Changed to use the expense state directly
+    if (!expense.source) {
+      toast({
+        title: 'Source Required',
+        description: 'Please enter an expense source',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    if (!expense.amount || isNaN(expense.amount) || Number(expense.amount) <= 0) {
+      toast({
+        title: 'Invalid Amount',
+        description: 'Please enter a valid amount greater than 0',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    if (!expense.date) {
+      toast({
+        title: 'Date Required',
+        description: 'Please select a date',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    try {
+      await axiosInstance.post("/expense/add", {
+        source: expense.source,
+        amount: Number(expense.amount),
+        date: expense.date,
+        icon: expense.icon || '💰', // Use default emoji if none selected
+      });
+
+      toast({
+        title: 'Success',
+        description: 'expense added successfully',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+
+      // Reset form and refresh data
+      setexpense({
+        source: "",
+        amount: "",
+        date: "",
+        icon: "",
+      });
+      onClose(); // Close the modal
+      fetchexpenseDetails();
+      chartData = formatexpenseChartData() // Refresh the expense data
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to add expense. Please try again.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
+  
 
   const handleDeleteClick = async (id) => {
     try {
-      console.log("ID: ",id)
-      const response = await axiosInstance.delete(`/expense/${id}`);
-      console.log(response);
+      await axiosInstance.delete(`/expense/${id}`);
 
       setIsDeleteAlertOpen(false);
 
-      fetchExpenseDetails();
+      fetchexpenseDetails();
+      chartData = formatexpenseChartData()
     } catch (error) {
       console.error('Error deleting expense transaction:', error);
     }
   };
 
-  useEffect(() => {
-    fetchExpenseDetails();
 
-    return () => {
-    }
-  }, []);
-
-  
   const formattedData = [...expenseData]
   .map(item => ({
     ...item,
@@ -234,12 +292,19 @@ export default function Expense() {
   .sort((a, b) => a.sortDate - b.sortDate)
   .map(({ sortDate, ...rest }) => rest); 
 
+
+  useEffect(() => {
+    fetchexpenseDetails();
+  }, []);
+
   return (
     <Box bg={pageBg} minH="100vh">
+      {console.log(expenseData)}
       <Navbar />
       <Container maxW="9xl" p={{ base: 4, md: 10 }}>
         <Box display="flex" flexDirection="column" gap={6}>
-          {/* Chart Box */}
+
+          
           <Box
             bg={bgColor}
             borderRadius="3xl"
@@ -256,13 +321,14 @@ export default function Expense() {
                   Expense Overview
                 </Heading>
                 <Text color={textColor} fontSize="md">
-                  Track your Expense trends over time and gain insights into your earnings.
+                  Track your expense trends over time and gain insights into your earnings.
                 </Text>
               </Box>
               <Button
                 leftIcon={<AddIcon />}
                 colorScheme="purple"
                 variant="outline"
+                fill="purple.300"
                 size="lg"
                 onClick={onOpen}
                 _hover={{
@@ -275,13 +341,13 @@ export default function Expense() {
               </Button>
             </Flex>
 
-            {/* Area Chart */}
+            {/* Area Chart Overall expense */}
             <Box h="350px" mt={8}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={formattedData}
-                  margin={{ left: 10, right: 10, bottom: 25 }}
-                >
+              <AreaChart
+                data={formattedData}
+                margin={{ left: 10, right: 10, bottom: 25 }}
+              >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis
                     dataKey="date"
@@ -303,26 +369,37 @@ export default function Expense() {
                       const d = new Date(value);
                       return `${d.getDate()}-${d.toLocaleString('default', { month: 'short' })}`;
                     }}
+                    contentStyle={{
+                      backgroundColor: bgColor,
+                      border: 'none',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                    }}
                   />
                   <Area
                     type="monotone"
                     dataKey="amount"
-                    stroke="#F87171"
-                    fill="#F87171"
-                    fillOpacity={0.2}
+                    stroke="#E53E3E" 
+                    fill="#FED7D7"
+                    fillOpacity={0.7}
                     strokeWidth={2}
-                    dot={{ fill: '#F87171', strokeWidth: 2 }}
-                    activeDot={{ r: 8 }}
-                  />
+                    dot={{ fill: "#E53E3E", strokeWidth: 3 }}
+                    activeDot={{ r: 8 }} 
+                    />
                 </AreaChart>
               </ResponsiveContainer>
             </Box>
           </Box>
 
+          <Grid
+            templateColumns="repeat(5, 1fr)"
+            templateRows="repeat(2, 1fr)"
+            gap={6}
+          >
+            <GridItem colSpan={2} rowSpan={1}>
 
-          <Box display="flex" gap={8}>
+          {/* Pie Chart */}
             <Box
-              flex="0.30"
               bg={bgColor}
               borderRadius="3xl"
               overflow="hidden"
@@ -330,16 +407,16 @@ export default function Expense() {
               _hover={{ boxShadow: '2xl' }}
               transition="all 0.3s ease"
               p={8}
+              w={"85%"}
             >
               <VStack spacing={2} align="center" mb={6}>
                 <Box>
                   <Heading size="lg" mb={3} color={"black"}>
-                    Expenses by Category
+                    Expense by Category
                   </Heading>
-                  <Text color={textColor} fontSize="md">Understand Expense distribution across different sources.</Text>
+                  <Text color={textColor} fontSize="md">Understand expense distribution across different sources.</Text>
                 </Box>
               </VStack>
-              
               <Box h="280px" position="relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -393,7 +470,7 @@ export default function Expense() {
                                   textAlign: 'center'
                                 }}
                               >
-                                Total Expense
+                                Total expense
                               </text>
                             </g>
                           );
@@ -414,9 +491,12 @@ export default function Expense() {
                 </ResponsiveContainer>
               </Box>
             </Box>
+            </GridItem>
 
+            <GridItem colSpan={2} rowSpan={1}>
+
+            {/* Bar Chart */}
             <Box
-              flex="0.40"
               bg={bgColor}
               borderRadius="3xl"
               overflow="hidden"
@@ -424,6 +504,8 @@ export default function Expense() {
               _hover={{ boxShadow: '2xl' }}
               transition="all 0.3s ease"
               p={8}
+              w={"117%"}
+              ml={-"20"}
             >
               <VStack spacing={2} align="center" mb={6}>
                 <Box>
@@ -433,8 +515,9 @@ export default function Expense() {
                   <Text color={textColor} fontSize="md">Understand your spending analytics</Text>
                 </Box>
               </VStack>
-              
-              <Box h="280px" position="relative">
+
+
+              <Box h="300px" position="relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={monthlyGroupedData}
@@ -464,7 +547,7 @@ export default function Expense() {
                         boxShadow: 'lg',
                         padding: '8px 12px'
                       }}
-                      formatter={(value) => [`$${value}`, 'Monthly Expense']}
+                      formatter={(value) => [`$${value}`, 'Monthly expense']}
                     />
                     <Bar
                       dataKey="amount"
@@ -476,8 +559,10 @@ export default function Expense() {
                 </ResponsiveContainer>
               </Box>
             </Box>
-          </Box>
+          </GridItem>
 
+
+          <GridItem colSpan={1} rowSpan={2}>
           {/* Table Box */}
           <Box
             bg={bgColor}
@@ -488,7 +573,7 @@ export default function Expense() {
             transition="all 0.3s ease"
             p={8}
           >
-            <Flex justify="space-between" align="center" mb={4}>
+            <Flex justify="space-between" align="center" mb={6}>
               <Heading size="lg" color={"black"} fontWeight={"bold"}>
                 All Expenses
               </Heading>
@@ -507,103 +592,180 @@ export default function Expense() {
               </Button>
             </Flex>
 
-            <Box maxH="500px" overflowY="auto" borderRadius="2xl" boxShadow="inner">
-            <Table variant="simple">
+            <Box
+              maxH="795px"
+              overflowY="auto"
+              borderRadius="2xl"
+              boxShadow="inner"
+              maxW="400px"
+            >
+              <Table variant="simple">
                 <Thead position="sticky" top={0} bg={bgColor} zIndex={2}>
                   <Tr>
-                    <Th borderTopRadius="lg" width="50%">Transaction</Th>
-                    <Th borderTopRadius="lg" width="50%">Transaction</Th>
+                    <Th borderTopRadius="lg">Transaction</Th>
                   </Tr>
                 </Thead>
                 <Tbody>
-                  {Array.from({ length: Math.ceil(expenseData.length / 2) }).map((_, rowIndex) => (
-                    <Tr key={rowIndex}>
-                      {[0, 1].map((colIndex) => {
-                        const transaction = expenseData[rowIndex * 2 + colIndex];
-                        return transaction ? (
-                          <Td key={colIndex}>
-                            <Box
-                              p={3}
-                              borderRadius="lg"
-                              transition="all 0.2s"
-                              position="relative"
-                              _hover={{ 
-                                bg: hoverBg,
-                                transform: 'translateY(-1px)',
-                                boxShadow: 'sm',
-                                '& .delete-icon': { opacity: 1 }
-                              }}
-                              border="1px solid"
-                              borderColor={borderColor}
-                            >
-                              <Flex justify="space-between" align="center">
-                                <HStack spacing={3}>
-                                  <Box
-                                    p={2}
-                                    bg={iconBg}
-                                    borderRadius="25"
-                                    display="flex"
-                                    alignItems="center"
-                                    justifyContent="center"
-                                  >
-                                    <Icon as={transaction.icon} color="purple.500" boxSize={6} />
-                                  </Box>
-                                  <Box ml={10}>
-                                    <Text fontSize="lg" fontWeight="semibold" mb={1.5}>
-                                      {transaction.source}
-                                    </Text>
-                                    <Text fontSize="sm" color={"gray.500"}>
-                                    {new Date(transaction.date).toLocaleDateString('en-GB', {
-                                      day: '2-digit',
-                                      month: 'short',
-                                      year: 'numeric'
-                                    })}
-                                    </Text>
-                                  </Box>
-                                </HStack>
-                                <HStack spacing={2}>
-                                  <Icon
-                                    as={DeleteIcon}
-                                    color="red.400"
-                                    boxSize={3.5}
-                                    cursor="pointer"
-                                    opacity={0}
-                                    className="delete-icon"
-                                    transition="all 0.2s"
-                                    onClick={() => {
-                                      setTransactionToDelete(transaction._id);
-                                      setIsDeleteAlertOpen(true);
-                                    }}
-                                    _hover={{ 
-                                      color: 'red.500',
-                                      transform: 'scale(1.1)'
-                                    }}
-                                  />
-                                  <Box
-                                    bg={amountBg}
-                                    px={3}
-                                    py={1.5}
-                                    borderRadius="md"
-                                    display="flex"
-                                    alignItems="center"
-                                    gap={1}
-                                  >
-                                    <Text color="red.500" fontWeight="semibold" fontSize="md">
-                                      -${transaction.amount}
-                                    </Text>
-                                  </Box>
-                                </HStack>
-                              </Flex>
-                            </Box>
-                          </Td>
-                        ) : <Td key={colIndex}></Td>;
-                      })}
+                  {expenseData.map((transaction) => (
+                    <Tr key={transaction._id}>
+                      <Td>
+                        <Box
+                          p={3}
+                          borderRadius="lg"
+                          transition="all 0.2s"
+                          position="relative"
+                          _hover={{
+                            bg: hoverBg,
+                            transform: 'translateY(-1px)',
+                            boxShadow: 'sm',
+                            '& .delete-icon': { opacity: 1 },
+                          }}
+                          border="1px solid"
+                          borderColor={borderColor}
+                        >
+                          <Flex justify="space-between" align="center">
+                            <HStack spacing={3}>
+                              <Box
+                                p={2}
+                                bg={iconBg}
+                                borderRadius="25"
+                                display="flex"
+                                alignItems="center"
+                                justifyContent="center"
+                              >
+                                {transaction.icon.startsWith('http') ? (
+                                  <Image src={transaction.icon} alt="emoji" boxSize="24px" />
+                                ) : (
+                                  <Text fontSize="xl">{transaction.icon || '💰'}</Text>
+                                )}
+                              </Box>
+                              <Box ml={4}>
+                                <Text fontSize="lg" fontWeight="semibold" mb={1.5}>
+                                  {transaction.source}
+                                </Text>
+                                <Text fontSize="sm" color="gray.500">
+                                  {new Date(transaction.date).toLocaleDateString('en-GB', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric',
+                                  })}
+                                </Text>
+                              </Box>
+                            </HStack>
+                            <HStack spacing={2}>
+                              <Icon
+                                as={DeleteIcon}
+                                color="red.400"
+                                boxSize={3.5}
+                                cursor="pointer"
+                                opacity={0}
+                                className="delete-icon"
+                                transition="all 0.2s"
+                                onClick={() => {
+                                  setTransactionToDelete(transaction._id);
+                                  setIsDeleteAlertOpen(true);
+                                }}
+                                _hover={{
+                                  color: 'red.500',
+                                  transform: 'scale(1.1)',
+                                }}
+                              />
+                              <Box
+                                bg={amountBg}
+                                px={3}
+                                py={1.5}
+                                borderRadius="md"
+                                display="flex"
+                                alignItems="center"
+                                gap={1}
+                              >
+                                <Text color="red.500" fontWeight="semibold" fontSize="md">
+                                  -${transaction.amount}
+                                </Text>
+                              </Box>
+                            </HStack>
+                          </Flex>
+                        </Box>
+                      </Td>
                     </Tr>
                   ))}
                 </Tbody>
               </Table>
             </Box>
+
           </Box>
+          </GridItem>
+
+          <GridItem colSpan={4} rowSpan={1}>
+          <Box
+            bg={bgColor}
+            borderRadius="3xl"
+            overflow="hidden"
+            boxShadow="xl"
+            _hover={{ boxShadow: '2xl' }}
+            transition="all 0.3s ease"
+            p={8}
+          >
+              <Box mb={2}>
+                <Heading size="lg" mb={3} color={"black"}>
+                  30 Day's Expense Overview
+                </Heading>
+                <Text color={textColor} fontSize="md">
+                  Track your last 30days expense trends over time and gain insights into your earnings.
+                </Text>
+              </Box>
+
+            <Box h="300px">
+              <ResponsiveContainer width="100%" height="95%">
+              <AreaChart
+                data={chartData}
+                margin={{ left: 10, right: 10, bottom: 25 }}
+              >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(date) => {
+                      const d = new Date(date);
+                      return `${d.getDate()}-${d.toLocaleString('default', { month: 'short' })}`;
+                    }}
+                    stroke="black"
+                    angle={-45}
+                    textAnchor="end"
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: textColor, fontSize: 12 }}
+                  />
+                  <Tooltip
+                    labelFormatter={(value) => {
+                      const d = new Date(value);
+                      return `${d.getDate()}-${d.toLocaleString('default', { month: 'short' })}`;
+                    }}
+                    contentStyle={{
+                      backgroundColor: bgColor,
+                      border: 'none',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="amount"
+                    stroke="#E53E3E"
+                    fill="#FED7D7"
+                    fillOpacity={0.7}
+                    strokeWidth={2}
+                    dot={{ fill: "#E53E3E", strokeWidth: 3 }}
+                    activeDot={{ r: 8 }}
+                  />
+
+                </AreaChart>
+              </ResponsiveContainer>
+            </Box>
+          </Box>
+          </GridItem>
+        </Grid>
         </Box>
       </Container>
 
@@ -613,7 +775,7 @@ export default function Expense() {
         <ModalContent borderRadius="2xl" p={4}>
           <ModalHeader>
             <Heading size="lg" color={"black"}>
-              Add Income
+              Add Expense
             </Heading>
           </ModalHeader>
           <ModalCloseButton />
@@ -621,54 +783,64 @@ export default function Expense() {
             <VStack spacing={4}>
               <Box w="full">
                 <HStack spacing={4} mb={6}>
-                  <Box
-                    p={3}
-                    bg={'purple.100'}
-                    borderRadius="25"
-                    cursor="pointer"
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    position="relative"
-                    _hover={{ bg: 'purple.400' }}
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    boxSize="50px"
-                  >
+                <Box
+                  p={3}
+                  bg="purple.100"
+                  borderRadius="25"
+                  cursor="pointer"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  position="relative"
+                  _hover={{ bg: 'purple.400' }}
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  boxSize="50px"
+                >
+                  {selectedEmojiUrl ? (
+                    <Image src={selectedEmojiUrl} alt="emoji" boxSize="30px" />
+                  ) : (
                     <Text fontSize="3xl" lineHeight="1">
                       {selectedEmoji}
                     </Text>
-                    {showEmojiPicker && (
-                      <Box
-                        position="absolute"
-                        top="100%"
-                        left="0"
-                        zIndex="dropdown"
-                        mt={2}
-                      >
-                        <EmojiPicker
-                          size={24}
-                          onEmojiClick={(emojiObject) => {
-                            setSelectedEmoji(emojiObject.emoji);
-                            setShowEmojiPicker(false);
-                          }}
-                          lazyLoadEmojis={true}
-                          searchPlaceholder="Search emoji..."
-                          previewConfig={{
-                            showPreview: true,
-                            defaultCaption: "Pick an emoji for your income category"
-                          }}
-                        />
-                      </Box>
-                    )}
-                  </Box>
+                  )}
+
+                  {showEmojiPicker && (
+                    <Box
+                      position="absolute"
+                      top="100%"
+                      left="0"
+                      zIndex="dropdown"
+                      mt={2}
+                    >
+                      <EmojiPicker
+                        size={24}
+                        onEmojiClick={(emojiObject) => {
+                          setSelectedEmoji(emojiObject.emoji); // emoji character
+                          setSelectedEmojiUrl(emojiObject.imageUrl); // emoji image URL
+                          handleChange("icon", emojiObject.imageUrl); // save URL to form
+                          setShowEmojiPicker(false);
+                        }}
+                        lazyLoadEmojis={true}
+                        searchPlaceholder="Search emoji..."
+                        previewConfig={{
+                          showPreview: true,
+                          defaultCaption: "Pick an emoji for your expense category"
+                        }}
+                      />
+                    </Box>
+                  )}
+                </Box>
+
                   <Text fontWeight="medium">Change Icon</Text>
                 </HStack>
                 
-                <Text mb={2} fontWeight="medium">Income Source</Text>
+                <Text mb={2} fontWeight="medium">Expense Source</Text>
                 <Input 
-                  placeholder="Freelance Development"
+                  value={expense.source}
+                  placeholder="Rent"
                   size="lg"
                   bg="gray.50"
+                  onChange={({target}) => handleChange("source", target.value)}
                 />
                 
                 <Text mt={4} mb={2} fontWeight="medium">Amount</Text>
@@ -682,30 +854,21 @@ export default function Expense() {
                   <Input 
                     placeholder="5000"
                     bg="gray.50"
+                    value={expense.amount}
+                    onChange={({target}) => handleChange("amount", target.value)}
                   />
                 </InputGroup>
                 
                 <Text mt={4} mb={2} fontWeight="medium">Date</Text>
                 <Input 
+                  value={expense.date}
                   type="date"
                   size="lg"
                   bg="gray.50"
+                  onChange={({target}) => handleChange("date", target.value)}
                 />
                 
                 <HStack spacing={4} width="full" mt={8} mb={4}>
-                  <Button
-                    colorScheme="teal"
-                    size="lg"
-                    width="full"
-                    leftIcon={<RiRobot2Fill />}
-                    variant="outline"
-                    _hover={{
-                      transform: 'translateY(-2px)',
-                      boxShadow: 'lg',
-                    }}
-                  >
-                    Add with AI
-                  </Button>
                   <Button
                     colorScheme="purple"
                     size="lg"
@@ -714,10 +877,12 @@ export default function Expense() {
                       transform: 'translateY(-2px)',
                       boxShadow: 'lg',
                     }}
+                    onClick={handleAddexpense}
                   >
-                    Add Income
+                    Add Expense
                   </Button>
                 </HStack>
+
               </Box>
             </VStack>
           </ModalBody>

@@ -338,7 +338,7 @@ export default function Income() {
               </Button>
             </Flex>
 
-            {/* Area Chart Overall Income */}
+            Area Chart Overall Income
             <Box h="350px" mt={8}>
               <ResponsiveContainer width="100%" height="100%">
               <AreaChart
