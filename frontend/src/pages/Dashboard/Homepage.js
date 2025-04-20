@@ -13,6 +13,7 @@ import {
   Th,
   Td,
   TableContainer,
+  useToast,
 } from '@chakra-ui/react';
 import {
   AreaChart,
@@ -36,6 +37,7 @@ import { useUserAuth } from '../../hooks/useUserAuth';
 import axiosInstance from '../../utils/axiosInstance';
 
 export default function Homepage() {
+  const toast = useToast();
 
   useUserAuth();
 
@@ -48,50 +50,70 @@ export default function Homepage() {
   const [expenseTransactions, setExpenseTransactions] = useState([]);
 
 
-    const fetchData = async () => {
-      try {
-        const response = await axiosInstance.get("/dashboard");
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
 
-        if (response.data) {
-          setTransactions(response.data);
-
-        }
-      } catch (err) {
-        console.log("Error fetching transactions: ", err);
+  const fetchData = async () => {
+    try {
+      const response = await axiosInstance.get("/dashboard");
+      if (response.data) {
+        setTransactions(response.data);
       }
-    };
-
-    const fetchIncomeData = async () => {
-      try {
-        const response = await axiosInstance.get("/income/get");
-  
-        if (response.data) {
-          setIncomeTransactions(response.data);
-        }
-      } catch (error) {
-        console.error('Error fetching income details:', error);
-      }
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch dashboard data. Please try again later.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
     }
+  };
 
-    const fetchExpenseData = async () => {
-      try {
-        const response = await axiosInstance.get("/expense/get");
-  
-        if (response.data) {
-          setExpenseTransactions(response.data);
-        }
-      } catch (error) {
-        console.error('Error fetching income details:', error);
+  const fetchIncomeData = async () => {
+    try {
+      const response = await axiosInstance.get("/income/get");
+      if (response.data) {
+        setIncomeTransactions(response.data);
       }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch income data. Please try again later.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
     }
+  };
 
-    useEffect(() => {
-      fetchData();
-      fetchIncomeData();
-      fetchExpenseData();
+  const fetchExpenseData = async () => {
+    try {
+      const response = await axiosInstance.get("/expense/get");
+      if (response.data) {
+        setExpenseTransactions(response.data);
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch expense data. Please try again later.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
 
-      return () => {}
-    }, []);
+  useEffect(() => {
+    fetchData();
+    fetchIncomeData();
+    fetchExpenseData();
+  }, []);
 
     const incomeTx = transactions?.last30Income?.transactions || [];
     const expenseTx = transactions?.last30Expenses?.transactions || [];
@@ -561,11 +583,7 @@ export default function Homepage() {
                   <Tbody>
                     {(transactions?.recentTransactions || [])
                       .map((item) => ({
-                        date: new Date(item.date).toLocaleDateString('en-GB', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        }),
+                        date: formatDate(item.date),
                         category: item.source,
                         amount: item.amount,
                         type: item.type === 'income' ? 'Income' : 'Expense',
